@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server"; import { z } from "zod";
+import { createStoreMember, getSession, listStoreMembers, SESSION_COOKIE, STORE_COOKIE } from "@/lib/auth";
+function owner(request: NextRequest) { const session = getSession(request.cookies.get(SESSION_COOKIE)?.value, request.cookies.get(STORE_COOKIE)?.value); return session?.role === "owner" ? session : null; }
+export async function GET(request: NextRequest) { const session = owner(request); return session ? NextResponse.json({ members: listStoreMembers(session.storeId) }) : NextResponse.json({ error: "仅老板可查看成员" }, { status: 403 }); }
+const schema = z.object({ username: z.string().trim().min(3).max(40).regex(/^[a-zA-Z0-9_.-]+$/), displayName: z.string().trim().min(2).max(30), password: z.string().min(8).max(100), role: z.enum(["manager", "finance", "storekeeper"]) });
+export async function POST(request: NextRequest) { try { const session = owner(request); if (!session) return NextResponse.json({ error: "仅老板可新建成员" }, { status: 403 }); return NextResponse.json(createStoreMember(session.storeId, schema.parse(await request.json()))); } catch (error) { return NextResponse.json({ error: error instanceof Error && error.message.includes("UNIQUE") ? "该账号已存在" : "成员信息不符合要求" }, { status: 400 }); } }

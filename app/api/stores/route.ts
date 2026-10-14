@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod"; import { addStoreForOwner, getSession, SESSION_COOKIE, STORE_COOKIE } from "@/lib/auth";
+const schema = z.object({ name: z.string().trim().min(2).max(50), code: z.string().trim().min(2).max(20).regex(/^[a-zA-Z0-9_-]+$/) });
+export async function POST(request: NextRequest) { try { const session = getSession(request.cookies.get(SESSION_COOKIE)?.value, request.cookies.get(STORE_COOKIE)?.value); if (!session || session.role !== "owner") return NextResponse.json({ error: "仅老板可新增门店" }, { status: 403 }); const storeId = addStoreForOwner(session.userId, { ...schema.parse(await request.json()), actor: session.displayName }); return NextResponse.json({ storeId }); } catch (error) { return NextResponse.json({ error: error instanceof Error && error.message.includes("UNIQUE") ? "门店编码已存在" : "新增门店失败" }, { status: 400 }); } }

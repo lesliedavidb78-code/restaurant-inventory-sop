@@ -1,0 +1,10 @@
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const temp = path.join(process.cwd(), '.review-temp');
+fs.mkdirSync(temp, { recursive: true });
+const data = path.join(temp, 'public-tests-' + Date.now());
+const runner = path.join(path.dirname(require.resolve('vitest/package.json')), 'vitest.mjs');
+const result = spawnSync(process.execPath, [runner, 'run', ...process.argv.slice(2)], { stdio: 'inherit', env: { ...process.env, RESTAURANT_DATA_DIR: data, TEMP: temp, TMP: temp } });
+if (result.error) throw result.error;
+process.exit(result.status ?? 1);

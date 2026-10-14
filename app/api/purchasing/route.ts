@@ -1,0 +1,12 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { localStore } from "@/lib/local-store";
+import { createPurchaseOrder, createSupplier, getPurchasing, receivePurchase, returnPurchase } from "@/lib/purchase";
+
+const line = z.object({ itemId: z.string().min(1), quantity: z.number().positive(), quantityUom: z.enum(["purchase", "stock"]), unitCostCents: z.number().finite().nonnegative() });
+const order = z.object({ requestId: z.string().min(8).max(100).optional(), supplierId: z.string().min(1), businessDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), expectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), note: z.string().max(200).optional(), lines: z.array(line).min(1) });
+
+export async function GET() { try { return NextResponse.json(await getPurchasing(localStore.storeId)); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "读取采购数据失败" }, { status: 400 }); } }
+export async function POST(req: NextRequest) { try { const body = await req.json(); if (body.type === "supplier") return NextResponse.json(await createSupplier({ ...localStore, name: z.string().trim().min(1).parse(body.name), contact: z.string().max(50).optional().parse(body.contact) })); return NextResponse.json(await createPurchaseOrder({ ...localStore, ...order.parse(body) })); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "保存采购单失败" }, { status: 400 }); } }
+export async function PATCH(req: NextRequest) { try { const body = z.object({ requestId: z.string().min(8).max(100).optional(), orderLineId: z.string().min(1), warehouseId: z.string().min(1), businessDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), quantity: z.number().positive(), unitCostCents: z.number().finite().nonnegative() }).parse(await req.json()); return NextResponse.json(await receivePurchase({ ...localStore, ...body })); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "确认收货失败" }, { status: 400 }); } }
+export async function PUT(req: NextRequest) { try { const body = z.object({ requestId: z.string().min(8).max(100).optional(), receiptId: z.string().min(1), businessDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), quantity: z.number().positive(), note: z.string().max(200).optional() }).parse(await req.json()); return NextResponse.json(await returnPurchase({ ...localStore, ...body })); } catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "采购退货失败" }, { status: 400 }); } }

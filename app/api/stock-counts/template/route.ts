@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import * as XLSX from "xlsx";
+import { localStore } from "@/lib/local-store";
+import { ready } from "@/lib/services";
+import { getStockCount } from "@/lib/reconciliation";
+export async function GET(req: NextRequest) { try { await ready(); const id=req.nextUrl.searchParams.get("id"); if(!id) throw new Error("请指定盘点单。"); const data=getStockCount(localStore.storeId,id); const count=data.count as { businessDate: string; mode: "open" | "blind" }; const rows=data.lines.map((x:any)=> count.mode === "open" ? ({SKU:x.sku,商品名称:x.itemName,分类:x.category,库存单位:x.stockUom,账面数量:x.bookQuantity,实盘数量:"",盘点原因:""}) : ({SKU:x.sku,商品名称:x.itemName,分类:x.category,库存单位:x.stockUom,实盘数量:"",盘点原因:""})); const ws=XLSX.utils.json_to_sheet(rows); ws['!cols']=(count.mode === "open" ? [14,24,16,12,14,14,24] : [14,24,16,12,14,24]).map(wch=>({wch})); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"盘点录入"); const buf=XLSX.write(wb,{type:"buffer",bookType:"xlsx",compression:true}); return new NextResponse(buf,{headers:{"Content-Type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","Content-Disposition":`attachment; filename*=UTF-8''${encodeURIComponent(`盘点表_${count.businessDate}.xlsx`)}`}}); } catch(e){return NextResponse.json({error:e instanceof Error?e.message:"导出盘点表失败"},{status:400});} }

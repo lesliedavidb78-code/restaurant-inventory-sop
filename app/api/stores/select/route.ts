@@ -1,0 +1,3 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod"; import { getSession, SESSION_COOKIE, STORE_COOKIE } from "@/lib/auth";
+export async function POST(request: NextRequest) { const session = getSession(request.cookies.get(SESSION_COOKIE)?.value, request.cookies.get(STORE_COOKIE)?.value); const parsed = z.object({ storeId: z.string().uuid() }).safeParse(await request.json()); if (!session || !parsed.success || !session.stores.some((store) => store.id === parsed.data.storeId)) return NextResponse.json({ error: "无权切换该门店" }, { status: 403 }); const response = NextResponse.json({ ok: true }); response.cookies.set(STORE_COOKIE, parsed.data.storeId, { httpOnly: true, sameSite: "lax", path: "/" }); return response; }

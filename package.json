@@ -1,0 +1,112 @@
+{
+  "name": "restaurant-inventory-sop",
+  "version": "0.1.36",
+  "private": true,
+  "license": "MIT",
+  "description": "Local-first restaurant inventory, purchasing, stock reconciliation and SOP recipe management; open for community review.",
+  "scripts": {
+    "dev": "next dev --webpack --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "desktop:prepare": "node scripts/prepare-desktop.cjs",
+    "native:rebuild:node": "pnpm rebuild better-sqlite3",
+    "native:rebuild:electron": "electron-rebuild -f -w better-sqlite3 -v 37.2.6",
+    "desktop:build": "pnpm native:rebuild:node && pnpm build && pnpm native:rebuild:electron && pnpm desktop:prepare && electron-builder --win nsis",
+    "pretest": "pnpm native:rebuild:node",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-isolated.cjs",
+    "db:seed": "tsx scripts/seed.ts",
+    "import:xlsx": "tsx scripts/import-xlsx.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "latest",
+    "drizzle-orm": "latest",
+    "lucide-react": "latest",
+    "mammoth": "^1.12.0",
+    "next": "latest",
+    "pinyin-pro": "^3.29.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "xlsx": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@electron/get": "3.1.0",
+    "@electron/rebuild": "^4.2.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.5",
+    "@types/better-sqlite3": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "drizzle-kit": "latest",
+    "electron": "37.2.6",
+    "electron-builder": "^26.15.3",
+    "jsdom": "^30.0.1",
+    "tsx": "latest",
+    "typescript": "5.9.3",
+    "vitest": "latest"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "org.restaurant.inventory.sop",
+    "productName": "开源餐饮库存审查版",
+    "directories": {
+      "output": "release"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "npmRebuild": false,
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "app",
+        "filter": [
+          "server.js",
+          "package.json",
+          "release-manifest.json",
+          ".next/**/*",
+          "public/**/*"
+        ]
+      },
+      {
+        "from": ".desktop-runtime/node_modules",
+        "to": "app/node_modules"
+      },
+      {
+        "from": "edition-data",
+        "to": "seed-data"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "include": "build/installer.nsh",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "@electron/get": "3.1.0"
+    },
+    "allowBuilds": {
+      "electron": true,
+      "electron-winstaller": true
+    }
+  }
+}
